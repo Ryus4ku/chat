@@ -11,11 +11,11 @@ import com.example.chat.R;
 
 import java.util.List;
 
-class ChatMessageAdapter extends ArrayAdapter<ChatMessage> {
-    private List<ChatMessage> chatmessages;
+class MessageAdapter extends ArrayAdapter<Message> {
+    private List<Message> chatmessages;
     private Activity act;
 
-    public ChatMessageAdapter(Activity context, int res, List<ChatMessage> messagesList) {
+    public MessageAdapter(Activity context, int res, List<Message> messagesList) {
         super(context, res, messagesList);
         act = context;
         chatmessages = messagesList;
@@ -26,12 +26,12 @@ class ChatMessageAdapter extends ArrayAdapter<ChatMessage> {
         LayoutInflater layoutInflater = (LayoutInflater) act.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
         int layoutRes = R.layout.own_bubble;
 
-        ChatMessage chatMessage = getItem(position);
-        String text = chatMessage.getText();
-        String sender = chatMessage.getSender();
-        String time = chatMessage.getTime();
+        Message message = getItem(position);
+        String text = message.getText();
+        String sender = message.getSender();
+        String time = message.getTime();
 
-        layoutRes = !chatMessage.isOwned() ? R.layout.foreign_bubble : layoutRes;
+        layoutRes = !message.isOwned() ? R.layout.foreign_bubble : layoutRes;
 
         if (convertView == null) {
             convertView = layoutInflater.inflate(layoutRes, parent, false);
@@ -41,7 +41,7 @@ class ChatMessageAdapter extends ArrayAdapter<ChatMessage> {
 
             TextView timeView = convertView.findViewById(R.id.time_stamp);
             timeView.setText(time);
-            if(!chatMessage.isOwned()) {
+            if(!message.isOwned()) {
                 TextView senderView = convertView.findViewById(R.id.sender);
                 senderView.setText(sender);
             }
@@ -52,7 +52,7 @@ class ChatMessageAdapter extends ArrayAdapter<ChatMessage> {
             TextView timeView = convertView.findViewById(R.id.time_stamp);
             timeView.setText(time);
 
-            if(!chatMessage.isOwned()) {
+            if(!message.isOwned()) {
                 TextView senderView = convertView.findViewById(R.id.sender);
                 senderView.setText(sender);
             }

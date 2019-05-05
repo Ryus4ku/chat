@@ -30,16 +30,14 @@ class WifiBroadcastReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-            if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) { }
-            else { }
+            if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {}
+            else {}
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action) && mManager != null) {
             Log.d("INWIFIBRECV", "requestedpeers");
             mManager.requestPeers(mChannel, myPeerListListener);
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             Log.d(TAG, "connection changed");
             mManager.requestConnectionInfo(mChannel, (ConnectionInfoListener) mActivity);
-        } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-
-        }
+        } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {}
     }
 }

@@ -47,10 +47,10 @@ import java.net.Socket;
 import java.nio.channels.Channel;
 
 public class BroadcastReceiverActivity extends AppCompatActivity implements ConnectionInfoListener {
-    WifiP2pManager mManager;
-    WifiP2pManager.Channel mChannel;
-    BroadcastReceiver mReceiver;
-    IntentFilter mIntentFilter;
+    private WifiP2pManager mManager;
+    private WifiP2pManager.Channel mChannel;
+    private BroadcastReceiver mReceiver;
+    private IntentFilter mIntentFilter;
     private String name;
     private WifiP2pDeviceList deviceList;
     private ListView mListView;
@@ -64,7 +64,6 @@ public class BroadcastReceiverActivity extends AppCompatActivity implements Conn
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_broadcast_receiver);
-
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, ACCESS_FINE_LOCATION);
@@ -73,19 +72,16 @@ public class BroadcastReceiverActivity extends AppCompatActivity implements Conn
         View bv = findViewById(R.id.broadcastActivity);
         bv.setBackgroundColor(getResources().getColor(R.color.colorLightGrey));
 
-        Button button = findViewById(R.id.refreshButton);
-
-        button.setOnClickListener(v -> onRefresh());
+        Button refreshButton = findViewById(R.id.refreshButton);
+        refreshButton.setOnClickListener(v -> onRefresh());
 
         Bundle extras = getIntent().getExtras();
         name = extras.getString("nameText");
-
         getSupportActionBar().setTitle("Поиск устройств");
 
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         mChannel = mManager.initialize(this, getMainLooper(), null);
         mReceiver = new WifiBroadcastReceiver(mManager, mChannel, this, peerListListener);
-
         if (mManager != null && mChannel != null) {
             mManager.requestGroupInfo(mChannel, group -> {
                 if (group != null && mManager != null && mChannel != null) {
@@ -116,7 +112,6 @@ public class BroadcastReceiverActivity extends AppCompatActivity implements Conn
                 public void onFailure(int reason) { Log.d(TAG, "name change failed: " + reason); }
             });
         } catch (Exception e) { Log.d(TAG, "No such method"); }
-
 
         mManager.discoverPeers(mChannel, new ActionListener() {
             @Override
@@ -168,12 +163,8 @@ public class BroadcastReceiverActivity extends AppCompatActivity implements Conn
             RotateLoading rotateLoading = findViewById(R.id.rotateloading);
             rotateLoading.start();
             Log.d("INPeerListListener", "Works");
-            TextView textView2 = findViewById(R.id.textView2);
-            if (!peers.toString().equals("")) {
-                textView2.setText("Список устройств:");
-            } else {
-                textView2.setText("Нет доступных устройств");
-            }
+            TextView topTextView = findViewById(R.id.textView2);
+            topTextView.setText(!peers.toString().equals("") ? "Список устройств:" : "Нет доступных устройств");
 
             for (WifiP2pDevice device : peers.getDeviceList()) {
                 device.deviceName = device.deviceName.replace("[Phone]", "");
@@ -307,9 +298,8 @@ public class BroadcastReceiverActivity extends AppCompatActivity implements Conn
         switch (requestCode) {
             case ACCESS_FINE_LOCATION:
                 if (grantResults.length > 0 &&
-                        grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission granted
-                } else {/* permission denied*/}
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                } else {}
                 return;
         }
     }

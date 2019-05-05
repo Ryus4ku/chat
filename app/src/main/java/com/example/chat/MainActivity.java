@@ -22,20 +22,22 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.chat.BroadcastReceiver.BroadcastReceiverActivity;
-import com.example.chat.DB.DBHelper;
+import com.example.chat.DB.DataBase;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    private final String LOG_TAG = "mainLogs";
-    private ArrayList<String> users;
-    private DBHelper dbHelper;
+    private ArrayList<String> usersFromDB;
+    private DataBase dataBase;
     private ListView userList;
-    private boolean permissionToAdd = false;
-    ArrayAdapter<String> adapter;
-    Button button;
-    int orangeColor;
+    private boolean isAddNewUser = false;
+    private ArrayAdapter<String> adapter;
+    private Button addNewUserButton;
+    private int orangeColor;
 
+    /**
+     * Разрешения
+     * */
     private int ACCESS_WIFI_STATE;
     private int CHANGE_WIFI_STATE;
     private int CHANGE_NETWORK_STATE;
@@ -45,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
     private int READ_PHONE_STATE;
     private int READ_EXTERNAL_STORAGE;
 
+    /**
+     * RequestCods для разрешений
+     * */
     private static final int REQUEST_CODE_ACCESS_WIFI_STATE = 1;
     private static final int REQUEST_CODE_CHANGE_WIFI_STATE = 2;
     private static final int REQUEST_CODE_CHANGE_NETWORK_STATE = 3;
@@ -53,13 +58,13 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 6;
     private static final int REQUEST_CODE_READ_PHONE_STATE = 7;
     private static final int REQUEST_CODE_READ_EXTERNAL_STORAGE = 8;
-    private static final int ACCESS_FINE_LOCATION = 9;
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        dataBase = new DataBase(this);
 
         ACCESS_WIFI_STATE = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE);
         CHANGE_WIFI_STATE = ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE);
@@ -73,50 +78,52 @@ public class MainActivity extends AppCompatActivity {
         if (ACCESS_WIFI_STATE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_WIFI_STATE}, REQUEST_CODE_ACCESS_WIFI_STATE);
         }
+
         if (CHANGE_WIFI_STATE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CHANGE_WIFI_STATE}, REQUEST_CODE_CHANGE_WIFI_STATE);
         }
+
         if (CHANGE_NETWORK_STATE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CHANGE_NETWORK_STATE}, REQUEST_CODE_CHANGE_NETWORK_STATE);
         }
+
         if (INTERNET != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.INTERNET}, REQUEST_CODE_INTERNET);
         }
+
         if (ACCESS_NETWORK_STATE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_NETWORK_STATE}, REQUEST_CODE_ACCESS_NETWORK_STATE);
         }
+
         if (WRITE_EXTERNAL_STORAGE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CODE_WRITE_EXTERNAL_STORAGE);
         }
+
         if (READ_PHONE_STATE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_PHONE_STATE}, REQUEST_CODE_READ_PHONE_STATE);
         }
+
         if (READ_EXTERNAL_STORAGE != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_CODE_READ_EXTERNAL_STORAGE);
-        }
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, ACCESS_FINE_LOCATION);
         }
 
         View bv = findViewById(R.id.mainActivity);
         bv.setBackgroundColor(getResources().getColor(R.color.colorLightGrey));
 
-        EditText editText = findViewById(R.id.editText);
-        final int whiteColor = getResources().getColor(R.color.white);
-        editText.setBackgroundColor(whiteColor);
-
-        button = findViewById(R.id.joinButton);
         orangeColor = getResources().getColor(R.color.colorOrange);
-        button.setBackgroundColor(orangeColor);
-        button.setEnabled(false);
-        button.setBackgroundColor(getResources().getColor(R.color.colorGrey));
+
+        addNewUserButton = findViewById(R.id.addButton);
+        addNewUserButton.setBackgroundColor(orangeColor);
+        addNewUserButton.setEnabled(false);
+        addNewUserButton.setBackgroundColor(getResources().getColor(R.color.colorGrey));
 
         userList = findViewById(R.id.userListView);
-        dbHelper = new DBHelper(this);
 
         WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         wifi.setWifiEnabled(true);
+
+        EditText editText = findViewById(R.id.editText);
+        editText.setBackgroundColor(getResources().getColor(R.color.white));
         editText.addTextChangedListener(new TextWatcher() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -132,9 +139,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (!users.isEmpty()) {
+                if (!usersFromDB.isEmpty()) {
                     int repeatUser = 0;
-                    repeatUser = users.contains(s.toString()) ? repeatUser + 1 : repeatUser;
+                    repeatUser = usersFromDB.contains(s.toString()) ? repeatUser + 1 : repeatUser;
                     if (repeatUser > 0) {
                         buttonAddDisabled();
                     } else {
@@ -148,58 +155,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void buttonAddDisabled() {
-        button.setText("Добавить пользователя");
-        button.setEnabled(false);
-        button.setBackgroundColor(getResources().getColor(R.color.colorGrey));
-        permissionToAdd = false;
+        addNewUserButton.setText("Добавить пользователя");
+        addNewUserButton.setEnabled(false);
+        addNewUserButton.setBackgroundColor(getResources().getColor(R.color.colorGrey));
+        isAddNewUser = false;
     }
 
     private void buttonAddEnabled() {
-        button.setText("Добавить пользователя");
-        button.setEnabled(true);
-        button.setBackgroundColor(orangeColor);
-        permissionToAdd = true;
+        addNewUserButton.setText("Добавить пользователя");
+        addNewUserButton.setEnabled(true);
+        addNewUserButton.setBackgroundColor(orangeColor);
+        isAddNewUser = true;
     }
 
     public void joinPressed(View view) {
         EditText editText = findViewById(R.id.editText);
         String message = editText.getText().toString();
-        if (permissionToAdd) {
-            dbHelper.insertNewUser(dbHelper, message);
-            users = dbHelper.getAllUsers(dbHelper);
-            adapter = new ArrayAdapter<>(this, R.layout.user_fragment, users);
+        if (isAddNewUser) {
+            dataBase.insertNewUser(dataBase, message);
+            usersFromDB = dataBase.getAllUsers(dataBase);
+            adapter = new ArrayAdapter<>(this, R.layout.user_fragment, usersFromDB);
             userList.setAdapter(adapter);
-            userList.setOnItemClickListener((parent, newView, position, id) -> {
-                TextView textView = newView.findViewById(R.id.userTextView);
-                Intent intent = new Intent(MainActivity.this, BroadcastReceiverActivity.class);
-                intent.putExtra("nameText", getCurrentName(textView));
-                startActivity(intent);
-            });
+            onItemClick();
         }
         buttonAddDisabled();
+    }
+
+    private void onItemClick() {
+        userList.setOnItemClickListener((parent, newView, position, id) -> {
+            TextView textView = newView.findViewById(R.id.userTextView);
+            Intent intent = new Intent(MainActivity.this, BroadcastReceiverActivity.class);
+            intent.putExtra("nameText", getCurrentName(textView));
+            startActivity(intent);
+        });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        users = dbHelper.getAllUsers(dbHelper);
-        if (!users.isEmpty()) {
-            adapter = new ArrayAdapter<>(this, R.layout.user_fragment, users);
+        usersFromDB = dataBase.getAllUsers(dataBase);
+        if (!usersFromDB.isEmpty()) {
+            adapter = new ArrayAdapter<>(this, R.layout.user_fragment, usersFromDB);
             userList.setAdapter(adapter);
-            userList.setOnItemClickListener((parent, view, position, id) -> {
-                TextView textView = view.findViewById(R.id.userTextView);
-                Intent intent = new Intent(MainActivity.this, BroadcastReceiverActivity.class);
-                intent.putExtra("nameText", getCurrentName(textView));
-                startActivity(intent);
-            });
+            onItemClick();
         } else {
-            permissionToAdd = true;
+            isAddNewUser = true;
         }
     }
 
     private String getCurrentName(TextView textView){
         String username = "";
-        for (String user : users) {
+        for (String user : usersFromDB) {
             username = user.equals(textView.getText()) ? user : username;
         }
         return username;
@@ -216,11 +222,9 @@ public class MainActivity extends AppCompatActivity {
             case REQUEST_CODE_WRITE_EXTERNAL_STORAGE:
             case REQUEST_CODE_READ_PHONE_STATE:
             case REQUEST_CODE_READ_EXTERNAL_STORAGE:
-            case ACCESS_FINE_LOCATION:
                 if (grantResults.length > 0 &&
-                        grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission granted
-                } else {/* permission denied*/}
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                } else {}
                 return;
         }
     }

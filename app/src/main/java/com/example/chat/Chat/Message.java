@@ -5,21 +5,21 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class ChatMessage {
-    private String TAG = "##ChatMessage";
+public class Message {
+    private String TAG = "##Message";
     private String text;
     private boolean owned;
     private String sender;
     private String time;
 
-    public ChatMessage(String text, boolean owned, String sender, String time) {
+    public Message(String text, boolean owned, String sender, String time) {
         this.text = text;
         this.owned = owned;
         this.sender = sender;
         this.time = time;
     }
 
-    public ChatMessage(String string) {
+    public Message(String string) {
         try {
             JSONObject json = new JSONObject(string);
             this.text = (String) json.get("text");

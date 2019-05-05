@@ -5,13 +5,13 @@ import com.example.chat.Listener;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 
-class ChatClient {
+class Client {
     private BufferedReader dataIn;
     private PrintWriter dataOut;
     private String name;
     private Listener listener;
 
-    public ChatClient(String name, BufferedReader dataIn, PrintWriter dataOut){
+    public Client(String name, BufferedReader dataIn, PrintWriter dataOut){
         this.dataIn = dataIn;
         this.dataOut = dataOut;
         this.name = name;
