@@ -1,4 +1,4 @@
-package com.example.chat;
+package com.example.chat.Chat;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -19,6 +19,10 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
+
+import com.example.chat.DB.DBHelper;
+import com.example.chat.R;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -42,6 +46,10 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
     private int PORT = 8000;
     BufferedReader fromGroupOwner;
     PrintWriter toGroupOwner;
+    private static DBHelper dbHelper;
+    static int id;
+    String clientName;
+    boolean needLoadMessage = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,13 +60,7 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
 
         ImageButton send = findViewById(R.id.send);
         send.setOnClickListener(this);
-
-        messages = new ArrayList<>();
         listView = findViewById(R.id.chat);
-
-        adapters = new ChatMessageAdapter(this, R.layout.foreign_bubble, messages);
-        listView.setAdapter(adapters);
-
         clients = new ArrayList<>();
         setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
@@ -67,11 +69,17 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
         info = (WifiP2pInfo) bundle.get("info");
         name = bundle.getString("name");
 
+        dbHelper = new DBHelper(this);
+        /*messages = new ArrayList<>();
+        adapters = new ChatMessageAdapter(this, R.layout.foreign_bubble, messages);
+        listView.setAdapter(adapters);*/
+
         try {
             initialize();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     public void initialize () throws IOException {
@@ -99,6 +107,7 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
                 toGroupOwner = new PrintWriter(socket.getOutputStream(), true);
                 toGroupOwner.println(name);
                 String partnerName = fromGroupOwner.readLine();
+                clientName = partnerName;
                 getSupportActionBar().setTitle(partnerName);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -120,7 +129,7 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
                 Socket clientSocket = serverSocket.accept();
                 BufferedReader dataIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 PrintWriter dataOut = new PrintWriter(clientSocket.getOutputStream(),true);
-                String clientName = dataIn.readLine();
+                clientName = dataIn.readLine();
                 dataOut.println(name);
                 ChatClient client = new ChatClient(clientName, dataIn, dataOut);
                 client.startListening();
@@ -166,41 +175,57 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
         EditText editText = findViewById(R.id.editText);
         String text = editText.getText().toString();
 
-        Time today = new Time(Time.getCurrentTimezone());
-        today.setToNow();
-        String minute;
-        if (today.minute < 10) {
-            minute = "0" + today.minute;
-        } else {
-            minute = String.valueOf(today.minute);
+        if (needLoadMessage) {
+            id = dbHelper.checkCompanion(dbHelper, clientName);
+            if (id == 0) {
+                id = dbHelper.addCompanion(dbHelper, clientName);
+            }
+
+            messages = dbHelper.getMessages(dbHelper, id);
+            adapters = new ChatMessageAdapter(this, R.layout.foreign_bubble, messages);
+            listView.setAdapter(adapters);
+
+            needLoadMessage = false;
         }
 
-        String time = today.hour + ":" + minute;
-
-        ChatMessage chatMessage = new ChatMessage(text, true, "", time);
-        messages.add(chatMessage);
-        adapters.notifyDataSetChanged();
-        editText.setText("");
-        /* DONE: Send your message "text" with your Name and a timestamp to the chat partners
-         * If you are the group owner send your message to all chat partners in clients list.
-         * If you are not the group owner send your message only to him
-         */
-        @SuppressLint("StaticFieldLeak")
-        AsyncTask<ChatMessage,Void,Void> sendMessage = new AsyncTask<ChatMessage, Void, Void>() {
-            @Override
-            protected Void doInBackground(ChatMessage... chatMessage) {
-                if(info.isGroupOwner && chatMessage.length != 0){
-                    for (ChatClient client:clients) {
-                        PrintWriter dataOut = client.getDataOut();
-                        dataOut.println(chatMessage[0].getJSONString(name));
-                    }
-                } else if (chatMessage.length != 0){
-                    toGroupOwner.println(chatMessage[0].getJSONString(name));
-                }
-                return null;
+        if (!text.equals("")) {
+            Time today = new Time(Time.getCurrentTimezone());
+            today.setToNow();
+            String minute;
+            if (today.minute < 10) {
+                minute = "0" + today.minute;
+            } else {
+                minute = String.valueOf(today.minute);
             }
-        };
-        sendMessage.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, chatMessage);
+
+            String time = today.hour + ":" + minute;
+
+            ChatMessage chatMessage = new ChatMessage(text, true, "", time);
+            messages.add(chatMessage);
+            dbHelper.addMessage(dbHelper, true, id, text, time);
+            adapters.notifyDataSetChanged();
+            editText.setText("");
+            /* DONE: Send your message "text" with your Name and a timestamp to the chat partners
+             * If you are the group owner send your message to all chat partners in clients list.
+             * If you are not the group owner send your message only to him
+             */
+            @SuppressLint("StaticFieldLeak")
+            AsyncTask<ChatMessage,Void,Void> sendMessage = new AsyncTask<ChatMessage, Void, Void>() {
+                @Override
+                protected Void doInBackground(ChatMessage... chatMessage) {
+                    if(info.isGroupOwner && chatMessage.length != 0){
+                        for (ChatClient client:clients) {
+                            PrintWriter dataOut = client.getDataOut();
+                            dataOut.println(chatMessage[0].getJSONString(name));
+                        }
+                    } else if (chatMessage.length != 0){
+                        toGroupOwner.println(chatMessage[0].getJSONString(name));
+                    }
+                    return null;
+                }
+            };
+            sendMessage.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, chatMessage);
+        }
     }
 
 
@@ -229,6 +254,7 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
         Log.d("Chat","received something");
         Log.d("Chat",chatMessage.getText());
         messages.add(chatMessage);
+        dbHelper.addMessage(dbHelper, chatMessage.isOwned(), id, chatMessage.getText(), chatMessage.getTime());
         updateOnMain();
     }
 

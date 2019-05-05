@@ -2,11 +2,13 @@ package com.example.chat;
 
 import android.util.Log;
 
+import com.example.chat.Chat.ChatActivity;
+
 import java.io.BufferedReader;
 
 public class Listener extends Thread{
     BufferedReader input;
-    boolean listening;
+    public boolean listening;
 
     public Listener(BufferedReader input){
         this.input = input;

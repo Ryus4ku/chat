@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".BroadcastReceiverActivity"
+    tools:context=".BroadcastReceiver.BroadcastReceiverActivity"
     android:id="@+id/broadcastActivity"
     android:orientation="vertical"
 >

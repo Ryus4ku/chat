@@ -26,8 +26,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="com.example.chat.BroadcastReceiverActivity"/>
-        <activity android:name="com.example.chat.ChatActivity" android:windowSoftInputMode="adjustPan|stateHidden" android:configChanges="orientation|screenSize|keyboard"/>
+        <activity android:name="com.example.chat.BroadcastReceiver.BroadcastReceiverActivity"/>
+        <activity android:name="com.example.chat.Chat.ChatActivity" android:windowSoftInputMode="adjustPan|stateHidden" android:configChanges="orientation|screenSize|keyboard"/>
     </application>
 
 </manifest>

@@ -1,4 +1,4 @@
-package com.example.chat;
+package com.example.chat.BroadcastReceiver;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;

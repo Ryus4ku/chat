@@ -1,4 +1,6 @@
-package com.example.chat;
+package com.example.chat.Chat;
+
+import com.example.chat.Listener;
 
 import java.io.BufferedReader;
 import java.io.PrintWriter;
@@ -20,7 +22,7 @@ class ChatClient {
     public PrintWriter getDataOut(){return dataOut;}
 
     public void startListening(){
-        listener.listening=true;
+        listener.listening = true;
         listener.start();
     }
 }

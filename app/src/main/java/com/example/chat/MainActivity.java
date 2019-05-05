@@ -21,6 +21,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.example.chat.BroadcastReceiver.BroadcastReceiverActivity;
 import com.example.chat.DB.DBHelper;
 
 import java.util.ArrayList;

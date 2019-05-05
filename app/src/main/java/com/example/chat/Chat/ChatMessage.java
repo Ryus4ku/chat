@@ -1,11 +1,11 @@
-package com.example.chat;
+package com.example.chat.Chat;
 
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-class ChatMessage {
+public class ChatMessage {
     private String TAG = "##ChatMessage";
     private String text;
     private boolean owned;

@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.example.chat.Chat.ChatMessage;
+
 import java.util.ArrayList;
 
 public class DBHelper extends SQLiteOpenHelper {
@@ -26,15 +28,15 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL(
                 "create table companions (" +
                         "id integer primary key autoincrement," +
-                        "name text," +
-                        "deviceCode text);"
+                        "name text);"
         );
         db.execSQL(
                 "CREATE TABLE messages (" +
-                        "companionsDevice text," +
-                        "companionMessage text," +
-                        "myMessage text," +
-                "FOREIGN KEY(companionsDevice) REFERENCES companions(deviceCode));"
+                        "id integer," +
+                        "owned integer," +
+                        "message text," +
+                        "time text," +
+                "FOREIGN KEY(id) REFERENCES companions(id));"
         );
 
     }
@@ -77,7 +79,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public int checkCompanion(DBHelper dbHelper, String where) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
         String[] whereSQL = {where};
-        Cursor cursor = database.query("companions", new String[] {"id"}, "deviceCode = ?", whereSQL, null, null, null);
+        Cursor cursor = database.query("companions", new String[] {"id"}, "name = ?", whereSQL, null, null, null);
 
         if (cursor != null && cursor.getCount() > 0) {
             cursor.moveToFirst();
@@ -91,18 +93,42 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
 
-    public int addCompanion(DBHelper dbHelper, String name, String deviceAddress) {
+    public int addCompanion(DBHelper dbHelper, String name) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("name", name);
-        cv.put("deviceCode", deviceAddress);
         db.insert("companions", null, cv);
         dbHelper.close();
 
-        return checkCompanion(dbHelper, deviceAddress);
+        return checkCompanion(dbHelper, name);
     }
 
-    public void getMessages(DBHelper dbHelper, int companionId) {
+    public void addMessage(DBHelper dbHelper, boolean owned, int id, String message, String time){
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("id", id);
+        cv.put("owned", owned ? 1 : 0);
+        cv.put("message", message);
+        cv.put("time", time);
+        db.insert("messages", null, cv);
+        dbHelper.close();
+    }
 
+    public ArrayList<ChatMessage> getMessages(DBHelper dbHelper, int companionId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ArrayList<ChatMessage> messages = new ArrayList<>();
+        String[] whereSQL = {String.valueOf(companionId)};
+        Cursor cursor = db.query("messages", new String[] {"owned, message, time"}, "id = ?", whereSQL, null, null, null);
+        if (cursor.moveToFirst()) {
+            do {
+                ChatMessage message = new ChatMessage(cursor.getString(1), cursor.getInt(0) == 1, null, cursor.getString(2));
+                messages.add(message);
+            } while (cursor.moveToNext());
+        } else {
+            Log.d(LOG_TAG, "0 rows");
+        }
+
+        dbHelper.close();
+        return messages;
     }
 }
