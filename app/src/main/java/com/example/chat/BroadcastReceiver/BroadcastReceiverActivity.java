@@ -231,6 +231,7 @@ public class BroadcastReceiverActivity extends AppCompatActivity implements Conn
     protected void onResume() {
         super.onResume();
         registerReceiver(mReceiver, mIntentFilter);
+        onRefresh();
     }
 
     @Override

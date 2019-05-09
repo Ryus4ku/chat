@@ -36,11 +36,14 @@ import java.util.List;
 
 public class ChatActivity extends AppCompatActivity implements OnClickListener {
     private static List<Message> messages;
+    private static List<Message> systemMessages;
     private static ArrayAdapter<Message> adapters;
+    private static ArrayAdapter<Message> systemAdapters;
     private static WifiP2pInfo info;
     private static List<Client> clients;
     private static DataBase dataBase;
-    private static int id;
+    private static int companionId;
+    private static int userId;
     private int PORT = 8000;
     private boolean needLoadMessage = true;
     private String name;
@@ -168,19 +171,17 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        while (needLoadMessage) {
+            loadMessageFromDB();
+        }
+    }
+
     private void message() {
         EditText editText = findViewById(R.id.editText);
         String text = editText.getText().toString();
-
-        if (needLoadMessage) {
-            id = dataBase.checkCompanion(dataBase, clientName);
-            id = id == 0 ? dataBase.addCompanion(dataBase, clientName) : id;
-
-            messages = dataBase.getMessages(dataBase, id);
-            adapters = new MessageAdapter(this, R.layout.foreign_bubble, messages);
-            listView.setAdapter(adapters);
-            needLoadMessage = false;
-        }
 
         if (!text.equals("")) {
             Time today = new Time(Time.getCurrentTimezone());
@@ -189,11 +190,6 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
             minute = today.minute < 10 ? "0" + today.minute : String.valueOf(today.minute);
             String time = today.hour + ":" + minute;
             Message message = new Message(text, true, "", time);
-            messages.add(message);
-            dataBase.addMessage(dataBase, true, id, text, time);
-            adapters.notifyDataSetChanged();
-            editText.setText("");
-
             @SuppressLint("StaticFieldLeak")
             AsyncTask<Message,Void,Void> sendMessage = new AsyncTask<Message, Void, Void>() {
                 @Override
@@ -210,13 +206,57 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
                 }
             };
             sendMessage.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+            messages.add(message);
+            dataBase.addMessage(dataBase, true, companionId, userId, text, time);
+            adapters.notifyDataSetChanged();
+            editText.setText("");
         }
+    }
+
+    private void loadMessageFromDB() {
+        if (needLoadMessage && clientName != null) {
+            companionId = dataBase.getIdByNameFromCustomTable(dataBase, DataBase.COMPANIONS_TABLE, clientName);
+            companionId = companionId == 0 ? dataBase.addCompanion(dataBase, clientName) : companionId;
+            userId = dataBase.getIdByNameFromCustomTable(dataBase, DataBase.USERS_TABLE, name);
+
+            messages = dataBase.getMessages(dataBase, companionId, userId);
+            adapters = new MessageAdapter(this, R.layout.foreign_bubble, messages);
+            listView.setAdapter(adapters);
+            needLoadMessage = false;
+        }
+    }
+
+    private void setSystemMessasge(Message message) {
+
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
-            case android.R.id.home: onBackPressed(); return true;
+            case android.R.id.home:
+                Time today = new Time(Time.getCurrentTimezone());
+                today.setToNow();
+                String minute;
+                minute = today.minute < 10 ? "0" + today.minute : String.valueOf(today.minute);
+                String time = today.hour + ":" + minute;
+                Message message = new Message(name + " покинул беседу@", true, "", time);
+                @SuppressLint("StaticFieldLeak")
+                AsyncTask<Message,Void,Void> sendMessage = new AsyncTask<Message, Void, Void>() {
+                    @Override
+                    protected Void doInBackground(Message... chatMessage) {
+                        if(info.isGroupOwner && chatMessage.length != 0){
+                            for (Client client:clients) {
+                                PrintWriter dataOut = client.getDataOut();
+                                dataOut.println(chatMessage[0].getJSONString(name));
+                            }
+                        } else if (chatMessage.length != 0){
+                            toGroupOwner.println(chatMessage[0].getJSONString(name));
+                        }
+                        return null;
+                    }
+                };
+                sendMessage.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+                onBackPressed(); return true;
             default: return super.onOptionsItemSelected(item);
         }
     }
@@ -230,10 +270,19 @@ public class ChatActivity extends AppCompatActivity implements OnClickListener {
         Message message = new Message(data);
         Log.d("Chat","received something");
         Log.d("Chat", message.getText());
-        messages.add(message);
-        dataBase.addMessage(dataBase, message.isOwned(), id, message.getText(), message.getTime());
+        String[] splitMessage = message.getText().split(" ", 2);
+        if (splitMessage.length > 1 && splitMessage[1].equals("покинул беседу@")) {
+            message.setText(message.getText().replaceAll("@", ""));
+            message.setSender("ChatBot");
+            messages.add(message);
+        } else {
+            messages.add(message);
+            dataBase.addMessage(dataBase, message.isOwned(), companionId, userId, message.getText(), message.getTime());
+        }
         updateOnMain();
     }
+
+
 
     @Override
     protected void onDestroy() {

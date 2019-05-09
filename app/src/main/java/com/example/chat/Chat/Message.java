@@ -36,6 +36,10 @@ public class Message {
         return text;
     }
 
+    public void setText(String text) {
+        this.text = text;
+    }
+
     public boolean isOwned() {
         return owned;
     }
@@ -45,6 +49,26 @@ public class Message {
     }
 
     public String getTime() {return time;}
+
+    public String getTAG() {
+        return TAG;
+    }
+
+    public void setTAG(String TAG) {
+        this.TAG = TAG;
+    }
+
+    public void setOwned(boolean owned) {
+        this.owned = owned;
+    }
+
+    public void setSender(String sender) {
+        this.sender = sender;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
 
     public String getJSONString(String sender) {
         String string;

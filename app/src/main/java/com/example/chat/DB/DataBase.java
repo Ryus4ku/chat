@@ -13,6 +13,9 @@ import java.util.ArrayList;
 
 public class DataBase extends SQLiteOpenHelper {
     final String LOG_TAG = "dbLogs";
+    public static final String COMPANIONS_TABLE = "companions";
+    public static final String USERS_TABLE = "users";
+
     public DataBase(Context context) {
         super(context, "myDB", null, 1);
     }
@@ -32,11 +35,13 @@ public class DataBase extends SQLiteOpenHelper {
         );
         db.execSQL(
                 "CREATE TABLE messages (" +
-                        "id integer," +
+                        "idCompanion integer," +
+                        "idUser integer," +
                         "owned integer," +
                         "message text," +
                         "time text," +
-                "FOREIGN KEY(id) REFERENCES companions(id));"
+                "FOREIGN KEY (idCompanion) REFERENCES companions(id)," +
+                "FOREIGN KEY (idUser)      REFERENCES users(id));"
         );
 
     }
@@ -76,37 +81,35 @@ public class DataBase extends SQLiteOpenHelper {
         dataBase.close();
     }
 
-    public int checkCompanion(DataBase dataBase, String where) {
+    public int getIdByNameFromCustomTable(DataBase dataBase, String table, String name) {
         SQLiteDatabase database = dataBase.getWritableDatabase();
-        String[] whereSQL = {where};
-        Cursor cursor = database.query("companions", new String[] {"id"}, "name = ?", whereSQL, null, null, null);
-
+        String[] nameForSQL = {name};
+        Cursor cursor = database.query(table, new String[] {"id"}, "name = ?", nameForSQL, null, null, null);
+        int id = 0;
         if (cursor != null && cursor.getCount() > 0) {
             cursor.moveToFirst();
-            int id = cursor.getInt(0);
-            dataBase.close();
-            return id;
-        } else {
-            dataBase.close();
-            return 0;
+            id = cursor.getInt(0);
         }
-    }
 
+        dataBase.close();
+        return id;
+    }
 
     public int addCompanion(DataBase dataBase, String name) {
         SQLiteDatabase db = dataBase.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("name", name);
-        db.insert("companions", null, cv);
+        db.insert(COMPANIONS_TABLE, null, cv);
         dataBase.close();
 
-        return checkCompanion(dataBase, name);
+        return getIdByNameFromCustomTable(dataBase, COMPANIONS_TABLE, name);
     }
 
-    public void addMessage(DataBase dataBase, boolean owned, int id, String message, String time){
+    public void addMessage(DataBase dataBase, boolean owned, int companionId, int userId, String message, String time){
         SQLiteDatabase db = dataBase.getWritableDatabase();
         ContentValues cv = new ContentValues();
-        cv.put("id", id);
+        cv.put("idCompanion", companionId);
+        cv.put("idUser", userId);
         cv.put("owned", owned ? 1 : 0);
         cv.put("message", message);
         cv.put("time", time);
@@ -114,11 +117,11 @@ public class DataBase extends SQLiteOpenHelper {
         dataBase.close();
     }
 
-    public ArrayList<Message> getMessages(DataBase dataBase, int companionId) {
+    public ArrayList<Message> getMessages(DataBase dataBase, int companionId, int userId) {
         SQLiteDatabase db = dataBase.getWritableDatabase();
         ArrayList<Message> messages = new ArrayList<>();
-        String[] whereSQL = {String.valueOf(companionId)};
-        Cursor cursor = db.query("messages", new String[] {"owned, message, time"}, "id = ?", whereSQL, null, null, null);
+        String[] whereSQL = {String.valueOf(companionId), String.valueOf(userId)};
+        Cursor cursor = db.query("messages", new String[] {"owned, message, time"}, "idCompanion = ? and idUser = ?", whereSQL, null, null, null);
         if (cursor.moveToFirst()) {
             do {
                 Message message = new Message(cursor.getString(1), cursor.getInt(0) == 1, null, cursor.getString(2));

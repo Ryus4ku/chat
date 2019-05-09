@@ -40,4 +40,8 @@ class WifiBroadcastReceiver extends BroadcastReceiver {
             mManager.requestConnectionInfo(mChannel, (ConnectionInfoListener) mActivity);
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {}
     }
+
+    public Activity getmActivity() {
+        return mActivity;
+    }
 }
